@@ -2,39 +2,47 @@
   <v-container>
     <v-row class="text-center">
       <v-col cols="12">
-        <v-simple-table>
-          <template v-slot:default>
-            <thead>
-              <tr>
-                <th class="text-left">
-                  Id
-                </th>
-                <th class="text-left">
-                  Name
-                </th>
-                <th class="text-left">
-                  Description
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="category in categories.edges"
-                :key="category.node.id"
-              >
-                <td class="text-left">
-                  {{ category.node.id }}
-                </td>
-                <td class="text-left">
-                  {{ category.node.name }}
-                </td>
-                <td class="text-left">
-                  {{ category.node.description }}
-                </td>
-              </tr>
-            </tbody>
+        <ApolloQuery
+                :query="require('@/graphql/categories.gql')"
+                :variables="{ first: firstValue }"
+          >
+            <template v-slot="{ result: {  data } }">
+              <v-simple-table>
+                <template v-slot:default>
+                  <thead>
+                    <tr>
+                      <th class="text-left">
+                        Id
+                      </th>
+                      <th class="text-left">
+                        Name
+                      </th>
+                      <th class="text-left">
+                        Description
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="category in data.categories.edges"
+                      :key="category.node.id"
+                    >
+                      <td class="text-left">
+                        {{ category.node.id }}
+                      </td>
+                      <td class="text-left">
+                        {{ category.node.name }}
+                      </td>
+                      <td class="text-left">
+                        {{ category.node.description }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </template>
+              </v-simple-table>
           </template>
-        </v-simple-table>
+        </ApolloQuery>
+        <v-btn class="mt-2" @click="showMore">Show more</v-btn>
       </v-col>
       <v-col cols="6" class="mt-5">
         <v-form ref="form">
@@ -49,8 +57,8 @@
             required
           ></v-text-field>
           <div class="d-flex justify-space-between mt-4">
-            <v-btn @click="accountRegister()">Sign up</v-btn>
-            <v-btn @click="tokenCreate()">Log in</v-btn>
+            <v-btn @click="registerUser()">Sign up</v-btn>
+            <v-btn @click="createToken()">Log in</v-btn>
           </div>
         </v-form>
       </v-col>
@@ -68,20 +76,21 @@ export default {
     return {
       email: '',
       password: '',
-      categoriesNumber: 10
+      firstValue: 5
     }
   },
 
   methods: {
-    accountRegister() {
-      const mail = this.email
-      const pass = this.password
-      this.$apollo.mutate({
+     showMore() {
+      this.firstValue += 5 
+     },
+    async registerUser() {
+        await this.$apollo.mutate({
         mutation: gql`
-          mutation {
+          mutation($mail: String!, $pass: String!) {
             accountRegister(input: {
-              email: $email
-              password: $password
+              email: $mail
+              password: $pass
               redirectUrl: "https://localhost:3000"
             }), {
               accountErrors {
@@ -96,19 +105,17 @@ export default {
           }
         `,
         variables: {
-          email: mail,
-          password: pass
+          email: this.email,
+          password: this. password
         }
       })
       alert('Account registered')
     },
-    tokenCreate() {
-      const mail = this.email
-      const pass = this.password
-      this.$apollo.mutate({
+    async createToken() {
+      await this.$apollo.mutate({
         mutation: gql`
-          mutation {
-            tokenCreate(email: $email, password: $password) {
+          mutation ($mail: String!, $pass: String!) {
+            tokenCreate(email: $mail, password: $pass) {
               token
               user {
                 id
@@ -122,28 +129,12 @@ export default {
           }
         `,
         variables: {
-          email: mail,
-          password: pass
+          email: this.email,
+          password: this. password
         }
       })
       alert('Token created')
     }
-  },
-
-  apollo: {
-    categories: gql`
-      query {
-        categories(first: 5) {
-          edges {
-            node {
-              id
-              name
-              description
-            }
-          }
-        }
-      }
-    `
   }
 }
 </script>
